@@ -103,9 +103,18 @@ def sim(a):
         # na prezentacji były jakieś wskazniki jakości ale nie pamietam za bardzo żeby mówił
         # o nich na lekcji wiec idk w sm
         v_km_h = [3.6*x for x in a.v]
-    return a.u_zogr, a.u, a.droga, v_km_h, a.F_toczenia, a.F_opor_powietrza, a.F_ciagu, a.x, a.t
+        #wskażniki jakości jeszce 
+        #na prez zanalazłem wieck mogą sie przydac do czegoś
+        #przeregulowanie
+        if a.v_zad > 0:
+            kappa = ((max(v_km_h) - a.v_zad) / a.v_zad) * 100 # to ma być w procenrach pokazane
+        else:
+            kappa = (abs(min(v_km_h)) - abs(a.v_zad)) / abs(a.v_zad)) * 100 # to ma byc w procentach pokazane
+            
+        
+    return a.u_zogr, a.u, a.droga, v_km_h, a.F_toczenia, a.F_opor_powietrza, a.F_ciagu, a.x, a.t,kappa
 
-u_ograniczone, u, droga, v, F_opor, F_opor_powietrza, F_ciagu, x, t = sim(a)
+u_ograniczone, u, droga, v, F_opor, F_opor_powietrza, F_ciagu, x, t,kappa = sim(a)
 print(v)
 
 def plots(u_ograniczone, u, droga, v, F_opor, F_opor_powietrza, F_ciagu, x, t ):
