@@ -110,8 +110,23 @@ def sim(a):
             kappa = ((max(v_km_h) - a.v_zad) / a.v_zad) * 100 # to ma być w procenrach pokazane
         else:
             kappa = (abs(min(v_km_h)) - abs(a.v_zad)) / abs(a.v_zad)) * 100 # to ma byc w procentach pokazane
-            
-        
+        Ie = 0
+        #całkowe wskażniki dokładności regulacji 
+        for i in range(len(a.e)):
+            x = abs(a.e[i])
+            Ie = Ie + x
+        #całkowe wskazniki kosztów regulacji 
+        Iu = 0
+        for i in range(len(a.u)):
+            x = abs(a.u[i])
+            Iu = Iu + x
+        #czas regulacji
+        nr = 0
+        for i in range(a.N):
+            if abs(a.v[i]) <= abs(a.v_zad*0.94) or abs(a.v[i]) >= abs(a.v_zad*1.06):
+                nr = i
+                break
+        tr = tr*a.T_p
     return a.u_zogr, a.u, a.droga, v_km_h, a.F_toczenia, a.F_opor_powietrza, a.F_ciagu, a.x, a.t,kappa
 
 u_ograniczone, u, droga, v, F_opor, F_opor_powietrza, F_ciagu, x, t,kappa = sim(a)
