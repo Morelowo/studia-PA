@@ -1,31 +1,31 @@
 import math
 from matplotlib import pyplot as plt
-import pandas as pd
+#import pandas as pd
 class Autko:
     def __init__(self,v_0,v_zad,alfa):
         #parametry związane z samochodem
-        self.v_0 = float(v_0)/3.6              #prędkość początkowa km/h
-        self.v_zad = float(v_zad)/3.6        #prądkość zadana w km/h
-        self.m = 500.0                         #masa autka w kg skoda 1147kg opel astra 1300kg jak waga 500 to wykres ładniejszy
-        self.F_max = 2_000.0                    #max moc silnika w N
+        self.v_0 = float(v_0)/3.6                   #prędkość początkowa km/h
+        self.v_zad = float(v_zad)/3.6              #prądkość zadana w km/h
+        self.m = 1_000.0                         #masa autka w kg skoda 1147kg opel astra 1300kg
+        self.F_max = 30_000.0                    #max moc silnika w N
 
         #parametry do siły oporu
-        self.A = 2.850886                            #powierzchnia czołowa pojazdu 2.54 [m^2] opel astra 2,850886[m^2] skoda fabia 4
+        self.A = 2.87                          #powierzchnia czołowa pojazdu 2.54 [m^2] opel astra 2,850886[m^2] skoda fabia 4
         self.C = 0.28                           #stała do oporu opel 0.26 skoda 0.28
-        self.p = 1.225                          #gęstość powietrza
+        self.p = 1.1255                          #gęstość powietrza
         self.g = 9.81                           #przyspieszenie ziemskie
-        self.alfa = float(alfa)                   #kąt nachylenia podłoża
-
+        self.alfa = alfa                       #kąt nachylenia podłoża
+        self.op = 0.03                          #opór opon o asfalt
 
         #stałe do symulacji
         self.T_p = 0.1                          #czas próbkowania
-        self.t_sim = 500                        #czas symulacji [s]
-        self.k_p = 0.07                  #wzmocnienie regulatora
+        self.t_sim = 1000                        #czas symulacji [s]
+        self.k_p = 0.0006                    #wzmocnienie regulatora
         self.N = int(self.t_sim / self.T_p) + 1 #ilość iteracji
-        self.T_d = 0.01                     #czas wyprzedzania
-        self.T_i = 6.8                      #czas zdwojenia [s]
-        self.u_max = 20.0                        #max zmienna sterująca
-        self.u_min = -20.0                       #min zmienna sterująca
+        self.T_d = 0.006                    #czas wyprzedzania
+        self.T_i = 1.9                    #czas zdwojenia [s]
+        self.u_max = 30.0                        #max zmienna sterująca
+        self.u_min = -30.0                       #min zmienna sterująca
         # wzrost kp ozacza zmniejszenie uchybu regulacji w stanbie ustalonym
         #wzrost przeregulowania
         #wzrost Ti oznacza likwidacje uchybu regulacji w stanie ustalonym
@@ -44,13 +44,13 @@ class Autko:
         self.F_opor_powietrza = [0.0, ]
         self.F_opor = [0.0, ]
         self.F_toczenia = [0.0, ]
-
-a = Autko(60.0,110.0,5.0)
+a = Autko(0.0,110.0,2.0)
 #symulacja
 def sim(a):
     for i in range(a.N):
         a.t.append(i * a.T_p)
-        a.e.append(a.v_zad - a.v[-1])
+        e = a.v_zad - a.v[-1]
+        a.e.append(e)
         # algorytm pozycyjny
         u_v2 = a.k_p * (a.e[-1] + (a.T_p / a.T_i) * sum(a.e) + (a.T_d / a.T_p) * (a.e[-1] - a.e[-2]))
         a.u.append(u_v2)
@@ -62,8 +62,8 @@ def sim(a):
         a.x.append(a.u_zogr[-1] * a.poz_pedal)
 
 
-
-        F_toczenia = a.m * a.g * math.sin(abs(math.radians(a.alfa)))
+        F_oporow = a.op * a.m * a.g
+        F_toczenia = a.m * a.g * math.sin((math.radians(a.alfa)))
         F_oporow_powietrza = 0.5 * a.p * a.v[-1] * a.v[-1] * a.A * a.C
         F_ciagu = a.F_max * a.x[-1]
 
@@ -71,65 +71,76 @@ def sim(a):
         # w zalezności od tego cz np jedziemy do czy do przodu czy staczamy sie z góry
         # czy pod góre to siły oporu mogą nam defakto pomagać bardziej niz przeszkadzać
         # jak angle mniejsze niż 0 to jedziemy z górki albo cofamy sie pod górke
-        
+        wsp_T_op_pow = -1
         al = 1
         if a.alfa < 0:
-            al = 1
+            al= -1
             if a.v[-1] > 0:
                 wsp_T_op_pow = -1
             else:
                 wsp_T_op_pow = 1
-        elif math.radians(a.alfa) > 0:
+        elif a.alfa > 0:
             al = -1
             if a.v[-1] > 0:
                 wsp_T_op_pow = -1
             else:
                 wsp_T_op_pow = 1
         else:
-            if a.v[-1] >= 0:
+            if a.v[-1] > 0:
                 wsp_T_op_pow = -1
-            else:
+            elif a.v[-1] < 0:
                 wsp_T_op_pow = 1
 
 
 
         fop = F_oporow_powietrza * wsp_T_op_pow
         a.F_ciagu.append(F_ciagu)
-
+        a.F_opor.append(F_oporow)
         a.F_opor_powietrza.append(fop)
         a.F_toczenia.append(F_toczenia*al)
-        v = (a.T_p / a.m) * (F_ciagu + F_toczenia*al + fop) + a.v[-1]
+        v = (a.T_p / a.m) * (F_ciagu - F_toczenia + fop) + a.v[-1]
         a.droga.append(v * a.T_p + a.droga[-1])
         a.v.append(v)
-        # na prezentacji były jakieś wskazniki jakości ale nie pamietam za bardzo żeby mówił
-        # o nich na lekcji wiec idk w sm
-        v_km_h = [3.6*x for x in a.v]
-        #wskażniki jakości jeszce 
+
+    v_km_h = [3.6*x for x in a.v]
+        #wskażniki jakości jeszce
         #na prez zanalazłem wieck mogą sie przydac do czegoś
         #przeregulowanie
-        if a.v_zad > 0:
-            kappa = ((max(v_km_h) - a.v_zad) / a.v_zad)  # to ma być w procenrach pokazane
-        else:
-            kappa = (abs(min(v_km_h)) - abs(a.v_zad)) / abs(a.v_zad) # to ma byc w procentach pokazane
-        Ie = 0
-        #całkowe wskażniki dokładności regulacji 
-        for i in range(len(a.e)):
-            x = abs(a.e[i])
-            Ie = Ie + x
-        Ie = Ie*a.T_p
-        #całkowe wskazniki kosztów regulacji 
-        Iu = 0
-        for i in range(len(a.u)):
-            x = abs(a.u[i])
-            Iu = Iu + x
-        Iu = Iu*a.T_p
+    v_zad = a.v_zad*3.6
+    if v_zad > 0:
+        print(max(v_km_h))
+        print(v_zad)
+        kappa = ((max(v_km_h) - v_zad) / v_zad) * 100 # to ma być w procenrach pokazane
+    else:
+        kappa = (abs(min(v_km_h)) - (abs(v_zad)) / abs(v_zad)) * 100 # to ma byc w procentach pokazane
+    Ie = 0
+        #całkowe wskażniki dokładności regulacji
+    for i in range(len(a.e)):
+        x = abs(a.e[i])
+        Ie = Ie + x
+    Ie = Ie*a.T_p
+        #całkowe wskazniki kosztów regulacji
+    Iu = 0
+    for i in range(len(a.u)):
+        x = abs(a.u[i])
+        Iu = Iu + x
+    Iu = Iu*a.T_p
         #czas regulacji
+    nr = 0
+    print(a.N)
+    print(len(a.v))
+    for i in range(a.N, 1, -1):
+        if abs(v_km_h[i]) <= abs(v_zad*0.94) or abs(v_km_h[i]) >= abs(v_zad*1.06):
+            nr = i
+            break
+    tr = nr*a.T_p
+    return a.u_zogr, a.u, a.droga, v_km_h, a.F_toczenia, a.F_opor_powietrza, a.F_ciagu, a.x, a.t, kappa, Iu, Ie, tr
 
-
-    return a.u_zogr, a.u, a.droga, v_km_h, a.F_toczenia, a.F_opor_powietrza, a.F_ciagu, a.x, a.t, kappa, Iu, Ie
-
-u_ograniczone, u, droga, v, F_opor, F_opor_powietrza, F_ciagu, x, t, kappa, Iu, Ie = sim(a)
-#print(v)
+u_ograniczone, u, droga, v, F_opor, F_opor_powietrza, F_ciagu, x, t, kappa, Iu, Ie, tr = sim(a)
+print("przeregulowanie:", kappa, "%\n",
+      "koszty regulacji", Iu,"\n",
+       "dokładność regualcji", Ie,"\n",
+       "czas regulacji",tr)
 
 def plots(u_ograniczone, u, droga, v, F_opor, F_opor_powietrza, F_ciagu, x, t ):
     x_axis = t
@@ -173,7 +184,6 @@ def plots(u_ograniczone, u, droga, v, F_opor, F_opor_powietrza, F_ciagu, x, t ):
     return plt.show()
 
 plots(u_ograniczone, u, droga, v, F_opor, F_opor_powietrza, F_ciagu, x, t )
-print(kappa,Iu,Ie)
 
 
 
