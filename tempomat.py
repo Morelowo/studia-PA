@@ -6,11 +6,11 @@ class Autko:
         #parametry związane z samochodem
         self.v_0 = float(v_0)/3.6                   #prędkość początkowa km/h
         self.v_zad = float(v_zad)/3.6              #prądkość zadana w km/h
-        self.m = 1_000.0                         #masa autka w kg skoda 1147kg opel astra 1300kg
+        self.m = 600.0                         #masa autka w kg skoda 1147kg opel astra 1300kg
         self.F_max = 30_000.0                    #max moc silnika w N
 
         #parametry do siły oporu
-        self.A = 2.87                          #powierzchnia czołowa pojazdu 2.54 [m^2] opel astra 2,850886[m^2] skoda fabia 4
+        self.A = 2.87                         #powierzchnia czołowa pojazdu 2.54 [m^2] opel astra 2,850886[m^2] skoda fabia 4
         self.C = 0.28                           #stała do oporu opel 0.26 skoda 0.28
         self.p = 1.1255                          #gęstość powietrza
         self.g = 9.81                           #przyspieszenie ziemskie
@@ -19,8 +19,8 @@ class Autko:
 
         #stałe do symulacji
         self.T_p = 0.1                          #czas próbkowania
-        self.t_sim = 1000                        #czas symulacji [s]
-        self.k_p = 0.0006                    #wzmocnienie regulatora
+        self.t_sim = 500                        #czas symulacji [s]
+        self.k_p = 0.0008                    #wzmocnienie regulatora
         self.N = int(self.t_sim / self.T_p) + 1 #ilość iteracji
         self.T_d = 0.006                    #czas wyprzedzania
         self.T_i = 1.9                    #czas zdwojenia [s]
@@ -44,7 +44,7 @@ class Autko:
         self.F_opor_powietrza = [0.0, ]
         self.F_opor = [0.0, ]
         self.F_toczenia = [0.0, ]
-a = Autko(0.0,110.0,2.0)
+a = Autko(50.0,110.0,-2.0)
 #symulacja
 def sim(a):
     for i in range(a.N):
@@ -138,9 +138,9 @@ def sim(a):
 
 u_ograniczone, u, droga, v, F_opor, F_opor_powietrza, F_ciagu, x, t, kappa, Iu, Ie, tr = sim(a)
 print("przeregulowanie:", kappa, "%\n",
-      "koszty regulacji", Iu,"\n",
-       "dokładność regualcji", Ie,"\n",
-       "czas regulacji",tr)
+    "koszty regulacji", Iu,"\n",
+    "dokładność regualcji", Ie,"\n",
+    "czas regulacji",tr)
 
 def plots(u_ograniczone, u, droga, v, F_opor, F_opor_powietrza, F_ciagu, x, t ):
     x_axis = t
@@ -184,7 +184,6 @@ def plots(u_ograniczone, u, droga, v, F_opor, F_opor_powietrza, F_ciagu, x, t ):
     return plt.show()
 
 plots(u_ograniczone, u, droga, v, F_opor, F_opor_powietrza, F_ciagu, x, t )
-
 
 
 
